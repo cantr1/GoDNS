@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"log"
 	"os"
+	"strconv"
 
 	"github.com/cantr1/GoDNS/internal/api"
 	"github.com/cantr1/GoDNS/internal/database"
@@ -15,7 +16,7 @@ import (
 // Config is a struct containing configuration variables for the application
 type Config struct {
 	APIPort string
-	DNSPort string
+	DNSPort int
 	APIKey  string
 	DBURL   string
 	DEVMode bool
@@ -28,9 +29,15 @@ func main() {
 		log.Fatalf("error loading env variables: %v", err)
 	}
 
+	// Convert DNS port to string
+	dnsPortStr, err := strconv.Atoi(os.Getenv("DNS_PORT"))
+	if err != nil {
+		log.Fatalf("error converting DNS port to string: %v", err)
+	}
+
 	config := Config{
 		APIPort: os.Getenv("API_PORT"),
-		DNSPort: os.Getenv("DNS_PORT"),
+		DNSPort: dnsPortStr,
 		APIKey:  os.Getenv("API_KEY"),
 		DBURL:   os.Getenv("DB_URL"),
 		DEVMode: os.Getenv("DEV_MODE") == "true",
@@ -48,10 +55,17 @@ func main() {
 		DBQueries: database.New(db),
 		APIKey:    config.APIKey,
 		DEVMode:   config.DEVMode,
+		Port:      config.APIPort,
 	}
 
-	apiServer := api.NewServer(config.APIPort, &apiDependencies)
-	dnsServer := dns.NewServer(config.DNSPort)
+	// Set up dependencies for DNS server
+	dnsDependencies := dns.Dependencies{
+		DBQueries: database.New(db),
+		Port:      config.DNSPort,
+	}
+
+	apiServer := api.NewServer(&apiDependencies)
+	dnsServer := dns.NewServer(&dnsDependencies)
 
 	api.Run(apiServer)
 	dns.Run(dnsServer)

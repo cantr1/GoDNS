@@ -17,6 +17,7 @@ type Dependencies struct {
 	DBQueries *database.Queries
 	APIKey    string
 	DEVMode   bool
+	Port      string
 }
 
 // Server is a struct used at runtime by the API to process dependencies
@@ -24,6 +25,7 @@ type Server struct {
 	DBQueries *database.Queries
 	APIKey    string
 	DEVMode   bool
+	Port      string
 }
 
 // Record --- Struct definition for returning a full record
@@ -67,7 +69,7 @@ func (r RecordCreate) Validate() bool {
 	return true
 }
 
-func NewServer(port string, dependencies *Dependencies) *http.Server {
+func NewServer(dependencies *Dependencies) *http.Server {
 	var mux = http.NewServeMux()
 
 	// Create struct for runtime dependencies
@@ -75,13 +77,14 @@ func NewServer(port string, dependencies *Dependencies) *http.Server {
 		DBQueries: dependencies.DBQueries,
 		APIKey:    dependencies.APIKey,
 		DEVMode:   dependencies.DEVMode,
+		Port:      dependencies.Port,
 	}
 
 	apiServer.registerRoutes(mux)
 
 	// Start Server
 	server := &http.Server{
-		Addr:    port,
+		Addr:    apiServer.Port,
 		Handler: mux,
 	}
 
