@@ -47,54 +47,76 @@ func (q *Queries) CreateDNSRecord(ctx context.Context, arg CreateDNSRecordParams
 	return i, err
 }
 
-const getDNSRecordByName = `-- name: GetDNSRecordByName :one
-SELECT name, ttl, class, type, value FROM dns_records WHERE name = $1
+const getDNSRecordByName = `-- name: GetDNSRecordByName :many
+SELECT id, name, ttl, class, type, value, created_at, updated_at FROM dns_records WHERE name = $1
 `
 
-type GetDNSRecordByNameRow struct {
-	Name  string
-	Ttl   int32
-	Class string
-	Type  string
-	Value string
+func (q *Queries) GetDNSRecordByName(ctx context.Context, name string) ([]DnsRecord, error) {
+	rows, err := q.db.QueryContext(ctx, getDNSRecordByName, name)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []DnsRecord
+	for rows.Next() {
+		var i DnsRecord
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Ttl,
+			&i.Class,
+			&i.Type,
+			&i.Value,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
-func (q *Queries) GetDNSRecordByName(ctx context.Context, name string) (GetDNSRecordByNameRow, error) {
-	row := q.db.QueryRowContext(ctx, getDNSRecordByName, name)
-	var i GetDNSRecordByNameRow
-	err := row.Scan(
-		&i.Name,
-		&i.Ttl,
-		&i.Class,
-		&i.Type,
-		&i.Value,
-	)
-	return i, err
-}
-
-const getDNSRecordByValue = `-- name: GetDNSRecordByValue :one
-SELECT name, ttl, class, type, value  FROM dns_records WHERE value = $1
+const getDNSRecordByValue = `-- name: GetDNSRecordByValue :many
+SELECT id, name, ttl, class, type, value, created_at, updated_at FROM dns_records WHERE value = $1
 `
 
-type GetDNSRecordByValueRow struct {
-	Name  string
-	Ttl   int32
-	Class string
-	Type  string
-	Value string
-}
-
-func (q *Queries) GetDNSRecordByValue(ctx context.Context, value string) (GetDNSRecordByValueRow, error) {
-	row := q.db.QueryRowContext(ctx, getDNSRecordByValue, value)
-	var i GetDNSRecordByValueRow
-	err := row.Scan(
-		&i.Name,
-		&i.Ttl,
-		&i.Class,
-		&i.Type,
-		&i.Value,
-	)
-	return i, err
+func (q *Queries) GetDNSRecordByValue(ctx context.Context, value string) ([]DnsRecord, error) {
+	rows, err := q.db.QueryContext(ctx, getDNSRecordByValue, value)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []DnsRecord
+	for rows.Next() {
+		var i DnsRecord
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Ttl,
+			&i.Class,
+			&i.Type,
+			&i.Value,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getDNSRecords = `-- name: GetDNSRecords :many
@@ -131,6 +153,24 @@ func (q *Queries) GetDNSRecords(ctx context.Context) ([]DnsRecord, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const removeRecordByName = `-- name: RemoveRecordByName :exec
+DELETE FROM dns_records WHERE name = $1
+`
+
+func (q *Queries) RemoveRecordByName(ctx context.Context, name string) error {
+	_, err := q.db.ExecContext(ctx, removeRecordByName, name)
+	return err
+}
+
+const removeRecordByValue = `-- name: RemoveRecordByValue :exec
+DELETE FROM dns_records WHERE value = $1
+`
+
+func (q *Queries) RemoveRecordByValue(ctx context.Context, value string) error {
+	_, err := q.db.ExecContext(ctx, removeRecordByValue, value)
+	return err
 }
 
 const removeRecords = `-- name: RemoveRecords :exec

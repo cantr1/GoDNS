@@ -160,11 +160,6 @@ func (apiServer *Server) createRecord(w http.ResponseWriter, r *http.Request) {
 }
 
 func (apiServer *Server) deleteRecords(w http.ResponseWriter, r *http.Request) {
-	if apiServer.DEVMode != true {
-		http.Error(w, "DEV mode is disabled", http.StatusUnauthorized)
-		return
-	}
-
 	w.Header().Set("Content-Type", "application/json")
 
 	key, err := auth.GetBearerToken(*r)
@@ -177,13 +172,46 @@ func (apiServer *Server) deleteRecords(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = apiServer.DBQueries.RemoveRecords(r.Context())
-	if err != nil {
-		http.Error(w, "Failed to delete records", http.StatusInternalServerError)
+	// Check for query
+	recordName := r.URL.Query().Get("name")
+	recordValue := r.URL.Query().Get("value")
+
+	if recordName != "" && recordValue != "" {
+		http.Error(w, "Cannot query for both name and value", http.StatusBadRequest)
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
+	if recordName == "" && recordValue == "" {
+		// Allow full DB reset if in dev mode and not targeting specific record
+		if apiServer.DEVMode != true {
+			http.Error(w, "DEV mode is disabled", http.StatusUnauthorized)
+			return
+		}
+
+		err = apiServer.DBQueries.RemoveRecords(r.Context())
+		if err != nil {
+			http.Error(w, "Failed to delete records", http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+	} else if recordName != "" {
+		err = apiServer.DBQueries.RemoveRecordByName(r.Context(), recordName)
+		if err != nil {
+			http.Error(w, "Failed to delete record", http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+	} else {
+		err = apiServer.DBQueries.RemoveRecordByValue(r.Context(), recordValue)
+		if err != nil {
+			http.Error(w, "Failed to delete record", http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+	}
 }
 
 func (apiServer *Server) getRecords(w http.ResponseWriter, r *http.Request) {
@@ -208,60 +236,27 @@ func (apiServer *Server) getRecords(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var dbRecords []database.DnsRecord
 	if recordName == "" && recordValue == "" {
 		// Get all records from the database
-		dbRecords, err := apiServer.DBQueries.GetDNSRecords(r.Context())
+		dbRecords, err = apiServer.DBQueries.GetDNSRecords(r.Context())
 		if err != nil {
 			http.Error(w, "Failed to retrieve records", http.StatusInternalServerError)
 			return
 		}
-
-		// Create a slice to store parsed records
-		var records []Record
-		for _, record := range dbRecords {
-			tmp := Record{
-				ID:        record.ID,
-				Name:      record.Name,
-				TTL:       record.Ttl,
-				Class:     record.Class,
-				Type:      record.Type,
-				Value:     record.Value,
-				CreatedAt: record.CreatedAt,
-				UpdatedAt: record.UpdatedAt,
-			}
-			records = append(records, tmp)
-		}
-
-		if err := json.NewEncoder(w).Encode(records); err != nil {
-			http.Error(w, "Failed to encode records", http.StatusInternalServerError)
-			return
-		}
 	} else if recordName != "" {
-		dbRecord, err := apiServer.DBQueries.GetDNSRecordByName(r.Context(), recordName)
+		dbRecords, err = apiServer.DBQueries.GetDNSRecordByName(r.Context(), recordName)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				http.Error(w, "Record not found", http.StatusNotFound)
 				return
 			}
 			http.Error(w, "Failed to retrieve record", http.StatusInternalServerError)
-			return
-		}
-
-		record := Record{
-			Name:  dbRecord.Name,
-			TTL:   dbRecord.Ttl,
-			Class: dbRecord.Class,
-			Type:  dbRecord.Type,
-			Value: dbRecord.Value,
-		}
-
-		if err := json.NewEncoder(w).Encode(record); err != nil {
-			http.Error(w, "Failed to encode record", http.StatusInternalServerError)
 			return
 		}
 	} else {
 		// Return records by value
-		dbRecord, err := apiServer.DBQueries.GetDNSRecordByValue(r.Context(), recordValue)
+		dbRecords, err = apiServer.DBQueries.GetDNSRecordByValue(r.Context(), recordValue)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				http.Error(w, "Record not found", http.StatusNotFound)
@@ -270,19 +265,27 @@ func (apiServer *Server) getRecords(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Failed to retrieve record", http.StatusInternalServerError)
 			return
 		}
+	}
 
-		record := Record{
-			Name:  dbRecord.Name,
-			TTL:   dbRecord.Ttl,
-			Class: dbRecord.Class,
-			Type:  dbRecord.Type,
-			Value: dbRecord.Value,
+	// Create a slice to store parsed records
+	var records []Record
+	for _, record := range dbRecords {
+		tmp := Record{
+			ID:        record.ID,
+			Name:      record.Name,
+			TTL:       record.Ttl,
+			Class:     record.Class,
+			Type:      record.Type,
+			Value:     record.Value,
+			CreatedAt: record.CreatedAt,
+			UpdatedAt: record.UpdatedAt,
 		}
+		records = append(records, tmp)
+	}
 
-		if err := json.NewEncoder(w).Encode(record); err != nil {
-			http.Error(w, "Failed to encode record", http.StatusInternalServerError)
-			return
-		}
+	if err := json.NewEncoder(w).Encode(records); err != nil {
+		http.Error(w, "Failed to encode records", http.StatusInternalServerError)
+		return
 	}
 
 }
