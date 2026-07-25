@@ -67,6 +67,6 @@ func main() {
 	apiServer := api.NewServer(&apiDependencies)
 	dnsServer := dns.NewServer(&dnsDependencies)
 
-	api.Run(apiServer)
+	go api.Run(apiServer)
 	dns.Run(dnsServer)
 }
