@@ -9,6 +9,44 @@ import (
 	"context"
 )
 
+const createDNSRecord = `-- name: CreateDNSRecord :one
+INSERT INTO dns_records (id, name, ttl, class, type, value, created_at, updated_at)
+VALUES (
+        gen_random_uuid(),$1, $2, $3, $4, $5, NOW(), NOW()
+)
+RETURNING id, name, ttl, class, type, value, created_at, updated_at
+`
+
+type CreateDNSRecordParams struct {
+	Name  string
+	Ttl   int32
+	Class string
+	Type  string
+	Value string
+}
+
+func (q *Queries) CreateDNSRecord(ctx context.Context, arg CreateDNSRecordParams) (DnsRecord, error) {
+	row := q.db.QueryRowContext(ctx, createDNSRecord,
+		arg.Name,
+		arg.Ttl,
+		arg.Class,
+		arg.Type,
+		arg.Value,
+	)
+	var i DnsRecord
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Ttl,
+		&i.Class,
+		&i.Type,
+		&i.Value,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getDNSRecordByName = `-- name: GetDNSRecordByName :one
 SELECT name, ttl, class, type, value FROM dns_records WHERE name = $1
 `
@@ -93,4 +131,13 @@ func (q *Queries) GetDNSRecords(ctx context.Context) ([]DnsRecord, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const removeRecords = `-- name: RemoveRecords :exec
+DELETE FROM dns_records
+`
+
+func (q *Queries) RemoveRecords(ctx context.Context) error {
+	_, err := q.db.ExecContext(ctx, removeRecords)
+	return err
 }

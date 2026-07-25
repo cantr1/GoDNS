@@ -12,11 +12,13 @@ import (
 	_ "github.com/lib/pq"
 )
 
+// Config is a struct containing configuration variables for the application
 type Config struct {
-	ApiPort   string
-	DnsPort   string
-	DBQueries *database.Queries
-	DBURL     string
+	APIPort string
+	DNSPort string
+	APIKey  string
+	DBURL   string
+	DEVMode bool
 }
 
 func main() {
@@ -27,9 +29,11 @@ func main() {
 	}
 
 	config := Config{
-		ApiPort: os.Getenv("API_PORT"),
-		DnsPort: os.Getenv("DNS_PORT"),
+		APIPort: os.Getenv("API_PORT"),
+		DNSPort: os.Getenv("DNS_PORT"),
+		APIKey:  os.Getenv("API_KEY"),
 		DBURL:   os.Getenv("DB_URL"),
+		DEVMode: os.Getenv("DEV_MODE") == "true",
 	}
 
 	// Connect to database
@@ -39,10 +43,15 @@ func main() {
 		return
 	}
 
-	config.DBQueries = database.New(db)
+	// Set up dependencies for the API server
+	apiDependencies := api.Dependencies{
+		DBQueries: database.New(db),
+		APIKey:    config.APIKey,
+		DEVMode:   config.DEVMode,
+	}
 
-	apiServer := api.NewServer(config.ApiPort)
-	dnsServer := dns.NewServer(config.DnsPort)
+	apiServer := api.NewServer(config.APIPort, &apiDependencies)
+	dnsServer := dns.NewServer(config.DNSPort)
 
 	api.Run(apiServer)
 	dns.Run(dnsServer)
