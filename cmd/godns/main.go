@@ -19,7 +19,7 @@ type Config struct {
 	DNSPort int
 	APIKey  string
 	DBURL   string
-	DEVMode bool
+	DEVMode string
 }
 
 func main() {
@@ -40,7 +40,7 @@ func main() {
 		DNSPort: dnsPortStr,
 		APIKey:  os.Getenv("API_KEY"),
 		DBURL:   os.Getenv("DB_URL"),
-		DEVMode: os.Getenv("DEV_MODE") == "true",
+		DEVMode: os.Getenv("DEV_MODE"),
 	}
 
 	// Connect to database
