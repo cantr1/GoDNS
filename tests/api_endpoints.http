@@ -1,0 +1,120 @@
+@host = http://localhost:8080
+@apiKey = replace-me
+
+### Health check
+GET {{host}}/api/health
+Authorization: Bearer {{apiKey}}
+
+### Reset records before seeding
+DELETE {{host}}/api/records
+Authorization: Bearer {{apiKey}}
+
+### Create A record
+POST {{host}}/api/records
+Authorization: Bearer {{apiKey}}
+Content-Type: application/json
+
+{
+  "name": "api.godns.test",
+  "ttl": 300,
+  "class": "IN",
+  "type": "A",
+  "value": "192.0.2.10"
+}
+
+### Create A record for Arch Machine
+POST {{host}}/api/records
+Authorization: Bearer {{apiKey}}
+Content-Type: application/json
+
+{
+  "name": "kelzlab.archmachine",
+  "ttl": 300,
+  "class": "IN",
+  "type": "A",
+  "value": "192.168.1.148"
+}
+
+### Create A record for RHEL VM1
+POST {{host}}/api/records
+Authorization: Bearer {{apiKey}}
+Content-Type: application/json
+
+{
+  "name": "kelzlab.rhelvm1",
+  "ttl": 300,
+  "class": "IN",
+  "type": "A",
+  "value": "192.168.1.150"
+}
+
+### Create A record for BSD Machine
+POST {{host}}/api/records
+Authorization: Bearer {{apiKey}}
+Content-Type: application/json
+
+{
+  "name": "kelzlab.bsdmachine",
+  "ttl": 300,
+  "class": "IN",
+  "type": "A",
+  "value": "192.168.1.150"
+}
+
+
+
+
+### Create AAAA record
+POST {{host}}/api/records
+Authorization: Bearer {{apiKey}}
+Content-Type: application/json
+
+{
+  "name": "api.godns.test",
+  "ttl": 300,
+  "class": "IN",
+  "type": "AAAA",
+  "value": "2001:db8::10"
+}
+
+### Create CNAME record
+POST {{host}}/api/records
+Authorization: Bearer {{apiKey}}
+Content-Type: application/json
+
+{
+  "name": "www.godns.test",
+  "ttl": 600,
+  "class": "IN",
+  "type": "CNAME",
+  "value": "api.godns.test"
+}
+
+### Create MX record
+POST {{host}}/api/records
+Authorization: Bearer {{apiKey}}
+Content-Type: application/json
+
+{
+  "name": "godns.test",
+  "ttl": 3600,
+  "class": "IN",
+  "type": "MX",
+  "value": "10 mail.godns.test"
+}
+
+### List seeded records
+GET {{host}}/api/records
+Authorization: Bearer {{apiKey}}
+
+### Find records by name
+GET {{host}}/api/records?name=api.godns.test
+Authorization: Bearer {{apiKey}}
+
+### Find record by value
+GET {{host}}/api/records?value=api.godns.test
+Authorization: Bearer {{apiKey}}
+
+### Delete one seeded record by name
+DELETE {{host}}/api/records?name=www.godns.test
+Authorization: Bearer {{apiKey}}

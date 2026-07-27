@@ -16,7 +16,7 @@ import (
 type Dependencies struct {
 	DBQueries *database.Queries
 	APIKey    string
-	DEVMode   bool
+	DEVMode   string
 	Port      string
 }
 
@@ -24,7 +24,7 @@ type Dependencies struct {
 type Server struct {
 	DBQueries *database.Queries
 	APIKey    string
-	DEVMode   bool
+	DEVMode   string
 	Port      string
 }
 
@@ -186,7 +186,7 @@ func (apiServer *Server) deleteRecords(w http.ResponseWriter, r *http.Request) {
 
 	if recordName == "" && recordValue == "" {
 		// Allow full DB reset if in dev mode and not targeting specific record
-		if apiServer.DEVMode != true {
+		if apiServer.DEVMode != "true" {
 			http.Error(w, "DEV mode is disabled", http.StatusUnauthorized)
 			return
 		}
